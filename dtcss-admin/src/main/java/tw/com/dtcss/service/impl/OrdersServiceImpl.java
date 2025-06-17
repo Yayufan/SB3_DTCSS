@@ -178,8 +178,8 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		long timestamp = System.currentTimeMillis();
 		// 每次請求自增，並限制在 0~99 之間
 		int count = counter.getAndIncrement() % 100;
-		// 最後開頭用topbs + 時間戳 + 自增數
-		return "topbs" + timestamp + String.format("%02d", count); // 生成交易编号
+		// 最後開頭用dtcss + 時間戳 + 自增數
+		return "dtcss" + timestamp + String.format("%02d", count); // 生成交易编号
 	}
 
 }
