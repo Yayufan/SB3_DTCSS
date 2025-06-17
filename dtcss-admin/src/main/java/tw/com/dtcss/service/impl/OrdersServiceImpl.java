@@ -16,6 +16,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import ecpay.payment.integration.AllInOne;
 import ecpay.payment.integration.domain.AioCheckOutOneTime;
 import lombok.RequiredArgsConstructor;
+import tw.com.dtcss.config.ProjectPropertiesConfig;
 import tw.com.dtcss.convert.OrdersConvert;
 import tw.com.dtcss.exception.OrderPaymentException;
 import tw.com.dtcss.mapper.MemberMapper;
@@ -33,6 +34,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 
 	private static final AtomicInteger counter = new AtomicInteger(0);
 
+	private final ProjectPropertiesConfig projectPropertiesConfig;
 	private final OrdersConvert ordersConvert;
 	private final OrdersItemService ordersItemService;
 	private final MemberMapper memberMapper;
@@ -153,9 +155,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		aioCheckOutOneTime.setItemName(orders.getItemsSummary());
 
 		// 設定付款完成後，返回的前端網址，這邊讓他回到官網
-		aioCheckOutOneTime.setClientBackURL("https://iopbs2025.org.tw/member");
+		aioCheckOutOneTime.setClientBackURL("https://" + projectPropertiesConfig.getDomain());
 		// 設定付款完成通知的網址,應該可以直接設定成後端API，實證有效
-		aioCheckOutOneTime.setReturnURL("https://iopbs2025.org.tw/prod-api/payment");
+		aioCheckOutOneTime.setReturnURL("https://" + projectPropertiesConfig.getDomain() + "prod-api/payment");
 		// 這邊不需要他回傳額外付款資料
 		aioCheckOutOneTime.setNeedExtraPaidInfo("N");
 		// 設定英文介面

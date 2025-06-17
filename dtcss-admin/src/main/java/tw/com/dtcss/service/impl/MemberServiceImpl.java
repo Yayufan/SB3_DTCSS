@@ -34,7 +34,9 @@ import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import tw.com.dtcss.config.ProjectPropertiesConfig;
 import tw.com.dtcss.convert.MemberConvert;
+import tw.com.dtcss.enums.MemberCategoryEnum;
 import tw.com.dtcss.enums.OrderStatusEnum;
 import tw.com.dtcss.exception.AccountPasswordWrongException;
 import tw.com.dtcss.exception.EmailException;
@@ -80,6 +82,8 @@ import tw.com.dtcss.service.TagService;
 @Service
 @RequiredArgsConstructor
 public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> implements MemberService {
+
+	private final ProjectPropertiesConfig projectPropertiesConfig;
 
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
@@ -151,7 +155,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				.stream()
 				.map(Orders::getMemberId)
 				.collect(Collectors.toList());
-
 
 		if (CollectionUtils.isEmpty(memberIdList)) {
 			return new Page<>(); // 沒有符合的訂單，返回空分頁對象
@@ -282,7 +285,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		memberQueryWrapper.eq(Member::getEmail, member.getEmail());
 		Long memberCount = baseMapper.selectCount(memberQueryWrapper);
 		if (memberCount > 0) {
-			throw new RegisteredAlreadyExistsException("This E-Mail has been registered");
+			throw new RegisteredAlreadyExistsException("此信箱已被註冊過");
 		}
 
 		// 新增會員
@@ -305,8 +308,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		AddOrdersItemDTO addOrdersItemDTO = new AddOrdersItemDTO();
 		// 設定 基本資料
 		addOrdersItemDTO.setOrdersId(ordersId);
-		addOrdersItemDTO.setProductType("Registration Fee");
-		addOrdersItemDTO.setProductName("2025 TOPBS Registration Fee");
+		addOrdersItemDTO.setProductType(ITEMS_SUMMARY_REGISTRATION);
+		addOrdersItemDTO
+				.setProductName(String.join(" ", projectPropertiesConfig.getTitle(), ITEMS_SUMMARY_REGISTRATION));
 
 		// 設定 單價、數量、小計
 		addOrdersItemDTO.setUnitPrice(BigDecimal.ZERO);
@@ -318,18 +322,17 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		/** ------------------------------------------------------- */
 		// 為新Member新增Tag分組
-		
+
 		// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
 		Long currentCount = memberManager.getMemberCount();
-		int groupSize = 200;
-		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
+		int groupIndex = (int) Math.ceil(currentCount / (double) projectPropertiesConfig.getGroupSize());
 
 		// 呼叫 Manager 拿到 Tag（不存在則新增Tag）
 		Tag groupTag = tagService.getOrCreateMemberGroupTag(groupIndex);
 
 		// 關聯 Member 與 Tag
 		memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
-		
+
 		/** ------------------------------------------------------- */
 
 		// 由後台新增的Member，自動付款完成，新增進與會者名單
@@ -337,8 +340,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		addAttendeesDTO.setEmail(member.getEmail());
 		addAttendeesDTO.setMemberId(member.getMemberId());
 		attendeesService.addAfterPayment(addAttendeesDTO);
-		
-		
+
 	}
 
 	@Override
@@ -346,102 +348,64 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	public SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException {
 
 		// 獲取設定上的早鳥優惠、一般金額、及最後註冊時間
-		Setting setting = settingService.getById(1L);
+		Setting setting = settingService.getSetting();
 
 		// 獲取當前時間
 		LocalDateTime now = LocalDateTime.now();
 
-		//本次註冊是否是台灣人
-		Boolean isTaiwan = addMemberDTO.getCountry().equals("Taiwan");
-
 		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
 		if (now.isAfter(setting.getLastRegistrationTime())) {
-			throw new RegistrationClosedException("The registration time has ended, please register on site!");
+			throw new RegistrationClosedException("線上註冊已關閉，請於現場報名");
 		}
 
-		// 設定會費 會根據早鳥優惠進行金額變動
-		BigDecimal amount = null;
-
-		// 處於早鳥優惠
-		if (!now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())) {
-
-			if (isTaiwan) {
-				// 他是台灣人，當前時間處於早鳥優惠，金額變動
-				amount = switch (addMemberDTO.getCategory()) {
-				// Member(會員) 的註冊費價格
-				case 1 -> BigDecimal.valueOf(700L);
-				// Others(學生或護士) 的註冊費價格
-				case 2 -> BigDecimal.valueOf(600L);
-				// Non-Member(非會員) 的註冊費價格
-				case 3 -> BigDecimal.valueOf(1000L);
-				default -> throw new RegistrationInfoException("category is not in system");
-				};
-			} else {
-				// 他是外國人，當前時間處於早鳥優惠，金額變動
-				amount = switch (addMemberDTO.getCategory()) {
-				// Member 的註冊費價格
-				case 1 -> BigDecimal.valueOf(9600L);
-				// Others 的註冊費價格
-				case 2 -> BigDecimal.valueOf(4800L);
-				// Non-member的註冊費價格
-				case 3 -> BigDecimal.valueOf(12800L);
-				default -> throw new RegistrationInfoException("category is not in system");
-				};
-			}
-
-		} else if (
-		// 時間比早鳥優惠時間晚 但比截止時間早，處於一般時間
-		now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())
-				&& now.isBefore(setting.getLastRegistrationTime())) {
-			// 早鳥結束但尚未截止
-			if (isTaiwan) {
-				// 他是台灣人，當前時間處於一般時間，金額變動
-				amount = switch (addMemberDTO.getCategory()) {
-				// Member(會員) 的註冊費價格
-				case 1 -> BigDecimal.valueOf(1000L);
-				// Others(學生或護士) 的註冊費價格
-				case 2 -> BigDecimal.valueOf(1200L);
-				// Non-Member(非會員) 的註冊費價格
-				case 3 -> BigDecimal.valueOf(1500L);
-				default -> throw new RegistrationInfoException("category is not in system");
-				};
-			} else {
-				// 他是外國人，當前時間處於一般時間，金額變動
-				amount = switch (addMemberDTO.getCategory()) {
-				// Member 的註冊費價格
-				case 1 -> BigDecimal.valueOf(12800L);
-				// Others 的註冊費價格
-				case 2 -> BigDecimal.valueOf(6400L);
-				// Non-member的註冊費價格
-				case 3 -> BigDecimal.valueOf(16000L);
-				default -> throw new RegistrationInfoException("category is not in system");
-				};
-			}
-		}
-
-		// 首先新增這個會員資料
+		// 判斷信箱有無被註冊過，新增這個會員資料
 		Member currentMember = memberConvert.addDTOToEntity(addMemberDTO);
 		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
 		memberQueryWrapper.eq(Member::getEmail, currentMember.getEmail());
 		Long memberCount = baseMapper.selectCount(memberQueryWrapper);
 
 		if (memberCount > 0) {
-			throw new RegisteredAlreadyExistsException("This E-Mail has been registered");
+			throw new RegisteredAlreadyExistsException("此信箱已被註冊過");
 		}
 
 		baseMapper.insert(currentMember);
 
-		// 然後開始新建 繳費訂單
+		// 設定會費 會根據身分進行金額變動
+		BigDecimal amount;
+		// 新建 繳費訂單，準備之後使用
 		AddOrdersDTO addOrdersDTO = new AddOrdersDTO();
-		// 設定 會員ID
+		MemberCategoryEnum memberCategoryEnum = MemberCategoryEnum.fromValue(addMemberDTO.getCategory());
+
+		// 判斷身分給予註冊費金額
+		switch (memberCategoryEnum) {
+		case DOCTOR: {
+			// 醫師，金額設定為0，狀態為已繳費
+			amount = BigDecimal.ZERO;
+			addOrdersDTO.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
+
+			// 因為是0元訂單, 直接付款完畢,所以醫師就直接是與會者
+			AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
+			addAttendeesDTO.setEmail(currentMember.getEmail());
+			addAttendeesDTO.setMemberId(currentMember.getMemberId());
+			attendeesService.addAfterPayment(addAttendeesDTO);
+
+			break;
+		}
+		case NURSE: {
+			// 護理人員，金額設定為250，狀態為已繳費
+			amount = BigDecimal.valueOf(250L);
+			addOrdersDTO.setStatus(OrderStatusEnum.UNPAID.getValue());
+			break;
+		}
+		default:
+			throw new RegistrationInfoException("不符合的註冊身分: " + memberCategoryEnum);
+		}
+
+		// 設定 訂單的會員ID
 		addOrdersDTO.setMemberId(currentMember.getMemberId());
-
-		// 設定 這筆訂單商品的統稱
+		// 設定 訂單商品的統稱
 		addOrdersDTO.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
-
-		// 設定繳費狀態為 未繳費(0)
-		addOrdersDTO.setStatus(OrderStatusEnum.UNPAID.getValue());
-
+		// 設定 訂單金額
 		addOrdersDTO.setTotalAmount(amount);
 
 		// 透過訂單服務 新增訂單
@@ -451,12 +415,14 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		AddOrdersItemDTO addOrdersItemDTO = new AddOrdersItemDTO();
 		// 設定 基本資料
 		addOrdersItemDTO.setOrdersId(ordersId);
-		addOrdersItemDTO.setProductType("Registration Fee");
-		addOrdersItemDTO.setProductName("2025 TOPBS Registration Fee");
+		addOrdersItemDTO.setProductType(ITEMS_SUMMARY_REGISTRATION);
+		addOrdersItemDTO
+				.setProductName(String.join(" ", projectPropertiesConfig.getTitle(), ITEMS_SUMMARY_REGISTRATION));
 
 		// 設定 單價、數量、小計
 		addOrdersItemDTO.setUnitPrice(amount);
 		addOrdersItemDTO.setQuantity(1);
+		// 金額為0也不會報錯
 		addOrdersItemDTO.setSubtotal(amount.multiply(BigDecimal.valueOf(1)));
 
 		// 透過訂單明細服務 新增訂單
@@ -464,111 +430,93 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 準備寄信給這個會員通知他，已經成功註冊，所以先製作HTML信件 和 純文字信件
 
-		String categoryString;
-		switch (addMemberDTO.getCategory()) {
-		case 1 -> categoryString = "Member " + "(" + addMemberDTO.getCategoryExtra() + ")";
-		case 2 -> categoryString = "Others";
-		case 3 -> categoryString = "Non-Member";
-		default -> categoryString = "Unknown";
+		// 準備要付款表單
+		String paymentInstruction = "";
+		if (memberCategoryEnum.getValue().equals(MemberCategoryEnum.NURSE.getValue())) {
+			paymentInstruction = "您需付款的金額為 台幣250元，請前往付款： " + projectPropertiesConfig.getProtocol()
+					+ projectPropertiesConfig.getDomain() + "/payment?orderId=" + ordersId;
 		}
 
+		// 準備信件，如果是Nurse身分,就會自動新增近表單內
 		String htmlContent = """
 				<!DOCTYPE html>
 					<html >
 						<head>
 							<meta charset="UTF-8">
 							<meta name="viewport" content="width=device-width, initial-scale=1.0">
-							<title>Registration Successful</title>
+							<title>註冊成功</title>
 							<style>
-								body { font-size: 1.2rem; line-height: 1.8; }
-								td { padding: 10px 0; }
+								td {
+								  padding: 10px 0;
+								}
 							</style>
 						</head>
 
 						<body >
-							<table>
+							<table  style="font-size:1rem;">
 								<tr>
-					       			<td >
-					           			<img src="https://iopbs2025.org.tw/_nuxt/banner.CL2lyu9P.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
-					       			</td>
-					   			</tr>
-								<tr>
-									<td style="font-size:2rem;">Welcome to 2025 TOPBS & IOBPS !</td>
+									<td style="font-size:1.2rem;">親愛的 %s ，您好：</td>
 								</tr>
 								<tr>
-									<td>We are pleased to inform you that your registration has been successfully completed.</td>
+									<td>感謝您註冊參加 %s ，您的註冊已成功完成。</td>
 								</tr>
 								<tr>
-									<td>Your registration details are as follows:</td>
+									<td>您的註冊資訊如下：</td>
 								</tr>
 								<tr>
-						            <td><strong>First Name:</strong> %s</td>
+						            <td><strong>姓名:</strong> %s</td>
 						        </tr>
-						        <tr>
-						            <td><strong>Last Name:</strong> %s</td>
-						        </tr>
-						        <tr>
-							        <td><strong>Country:</strong> %s</td>
+							    <tr>
+							        <td><strong>單位:</strong> %s</td>
 							    </tr>
 							    <tr>
-							        <td><strong>Affiliation:</strong> %s</td>
+							        <td><strong>職稱:</strong> %s</td>
 							    </tr>
 							    <tr>
-							        <td><strong>Job Title:</strong> %s</td>
+							        <td><strong>聯絡電話:</strong> %s</td>
 							    </tr>
 							    <tr>
-							        <td><strong>Phone:</strong> %s</td>
-							    </tr>
-							    <tr>
-							        <td><strong>Category:</strong> %s</td>
+							        <td><strong>報名身分:</strong> %s</td>
 							    </tr>
 								<tr>
-									<td>After logging in, please proceed with the payment of the registration fee.</td>
+									<td> %s </td>
 								</tr>
 								<tr>
-									<td>Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.</td>
-								</tr>
-								<tr>
-									<td>If you have any questions, feel free to contact us. We look forward to seeing you at the conference!</td>
+									<td><br>如果您有任何問題, 歡迎隨時與我們聯絡。我們期待在會議上與您相見！</td>
 								</tr>
 							</table>
 						</body>
 					</html>
-					"""
-				.formatted(addMemberDTO.getFirstName(), addMemberDTO.getLastName(), addMemberDTO.getCountry(),
-						addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(), addMemberDTO.getPhone(),
-						categoryString);
+					""".formatted(addMemberDTO.getChineseName(), projectPropertiesConfig.getTitle(),
+				addMemberDTO.getChineseName(), addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(),
+				addMemberDTO.getPhone(), memberCategoryEnum.getLabelZh(), paymentInstruction);
 
-		String plainTextContent = "Welcome to 2025 TOPBS & IOBPS !\n"
-				+ "Your registration has been successfully completed.\n" + "Your registration details are as follows:\n"
-				+ "First Name: " + addMemberDTO.getFirstName() + "\n" + "Last Name: " + addMemberDTO.getLastName()
-				+ "\n" + "Country: " + addMemberDTO.getCountry() + "\n" + "Affiliation: "
-				+ addMemberDTO.getAffiliation() + "\n" + "Job Title: " + addMemberDTO.getJobTitle() + "\n" + "Phone: "
-				+ addMemberDTO.getPhone() + "\n" + "Category: " + categoryString + "\n"
-				+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
-				+ "If you have any questions, feel free to contact us. We look forward to seeing you at the conference!";
+		// 準備純文字信件內容
+		String plainTextContent = String.format(
+				"親愛的 %s ，您好：\n\n" + "感謝您註冊參加 %s ，您的註冊已成功完成。\n\n" + "您的註冊資訊如下：\n\n" + "姓名: %s\n" + "單位: %s\n"
+						+ "職稱: %s\n" + "聯絡電話: %s\n" + "報名身分: %s\n\n" + "%s\n\n" + "如果您有任何問題, 歡迎隨時與我們聯絡。我們期待在會議上與您相見！",
+				addMemberDTO.getChineseName(), projectPropertiesConfig.getTitle(), addMemberDTO.getChineseName(),
+				addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(), addMemberDTO.getPhone(),
+				memberCategoryEnum.getValue(), paymentInstruction);
 
 		// 透過異步工作去寄送郵件
-		asyncService.sendCommonEmail(addMemberDTO.getEmail(), "2025 TOPBS & IOPBS  Registration Successful",
-				htmlContent, plainTextContent);
-
+		asyncService.sendCommonEmail(addMemberDTO.getEmail(), projectPropertiesConfig.getTitle(), htmlContent,
+				plainTextContent);
 
 		/** ------------------------------------------------------- */
 		// 為新Member新增Tag分組
-		
+
 		// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
 		Long currentCount = memberManager.getMemberCount();
-		int groupSize = 200;
-		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
+		int groupIndex = (int) Math.ceil(currentCount / (double) projectPropertiesConfig.getGroupSize());
 
 		// 呼叫 Manager 拿到 Tag（不存在則新增Tag）
 		Tag groupTag = tagService.getOrCreateMemberGroupTag(groupIndex);
 
 		// 關聯 Member 與 Tag
 		memberTagService.addMemberTag(currentMember.getMemberId(), groupTag.getTagId());
-		
-		/** ------------------------------------------------------- */
 
+		/** ------------------------------------------------------- */
 
 		// 之後應該要以這個會員ID 產生Token 回傳前端，讓他直接進入登入狀態
 		StpKit.MEMBER.login(currentMember.getMemberId());
@@ -677,10 +625,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			}
 
-
 			/** ------------------------------------------------------- */
 			// 為新Member新增Tag分組
-			
+
 			// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
 			Long currentCount = memberManager.getMemberCount();
 			int groupSize = 200;
@@ -691,7 +638,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			// 關聯 Member 與 Tag
 			memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
-			
+
 			/** ------------------------------------------------------- */
 
 		}
@@ -719,7 +666,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 設定 基本資料
 		addOrdersItemDTO.setOrdersId(ordersId);
 		addOrdersItemDTO.setProductType("Registration Fee");
-		addOrdersItemDTO.setProductName("2025 TOPBS Group Registration Fee");
+		addOrdersItemDTO.setProductName(projectPropertiesConfig.getTitle() + " Group Registration Fee");
 
 		// 設定 單價、數量、小計
 		addOrdersItemDTO.setUnitPrice(discountedTotalFee);
@@ -748,10 +695,10 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	public void approveUnpaidMember(Long memberId) {
 		// 更新狀態為已付款
 		ordersManager.approveUnpaidMember(memberId);
-		
+
 		// 拿到Member資訊
 		Member member = baseMapper.selectById(memberId);
-		
+
 		// 付款完成，新增進與會者名單
 		AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
 		addAttendeesDTO.setEmail(member.getEmail());
@@ -1152,7 +1099,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 				// 找到items_summary 符合 Registration Fee 或者 Group Registration Fee 以及 訂單會員ID與 會員相符的資料
 				Orders memberOrder = ordersManager.getRegistrationOrderByMemberId(member.getMemberId());
-				
+
 				// 取出status 並放入VO對象中
 				vo.setStatus(memberOrder.getStatus());
 				vo.setAmount(memberOrder.getTotalAmount());

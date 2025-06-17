@@ -1,31 +1,30 @@
 package tw.com.dtcss.pojo.DTO.addEntityDTO;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import tw.com.dtcss.utils.CountryUtil;
 
 @Data
 public class AddMemberDTO {
 
-	@NotBlank
+//	@NotBlank
 	@Schema(description = "同時作為護照號碼 和 台灣身分證字號使用")
 	private String idCard;
 
-	@NotBlank
+//	@NotBlank
 	@Schema(description = "頭銜 - 前墜詞")
 	private String title;
 
 	@Schema(description = "中文姓名，外國人非必填，台灣人必填")
 	private String chineseName;
 
-	@NotBlank
+//	@NotBlank
 	@Schema(description = "名字, 華人的名在後  , 外國人的名在前")
 	private String firstName;
 
-	@NotBlank
+//	@NotBlank
 	@Schema(description = "姓氏, 華人的姓氏在前, 外國人的姓氏在後")
 	private String lastName;
 
@@ -33,23 +32,22 @@ public class AddMemberDTO {
 	@Schema(description = "E-Mail")
 	private String email;
 
-	@NotBlank
+//	@NotBlank
 	@Schema(description = "密碼")
 	private String password;
 
-	@NotBlank
+//	@NotBlank
 	@Schema(description = "國家")
-	private String country;
+	private String country = CountryUtil.getNational();;
 
 	@Schema(description = "匯款帳號-後五碼  台灣會員使用")
 	private String remitAccountLast5;
 
 	@NotNull
-	@Schema(description = "用於分類會員資格, 1為 Member，2為 Others，3為 Non-Member，4為 MVP，5為 Speaker，6為 Moderator，7為 Staff")
+	@Schema(description = "用於分類會員資格, 1為 Member，2為 Others，3為 Non-Member，4為 MVP，5為 Speaker，6為 Moderator，7為 Staff，8 為醫師，9為 護理人員")
 	private Integer category;
 
 	@Schema(description = "會員資格的身份補充")
-	@TableField("category_extra")
 	private String categoryExtra;
 
 	@NotBlank
