@@ -11,10 +11,10 @@
     </parent>
     <packaging>pom</packaging>
     <groupId>tw.com</groupId>
-    <artifactId>topbs2025</artifactId>
+    <artifactId>dtcss</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>topbs2025</name>
-    <description>TOPBS 2025 年會版 </description>
+    <name>dtcss</name>
+    <description>dtcss 年會版 </description>
     <url />
     <licenses>
         <license />
@@ -306,6 +306,6 @@
 
 
     <modules>
-        <module>topbs2025-admin</module>
+        <module>dtcss-admin</module>
     </modules>
 </project>
