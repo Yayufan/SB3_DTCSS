@@ -178,7 +178,7 @@ public class MemberController {
 
 	@PostMapping
 	@Operation(summary = "新增單一會員，也就是註冊功能")
-	public R<SaTokenInfo> saveMember(@RequestBody @Valid AddMemberDTO addMemberDTO) throws RegistrationInfoException {
+	public R<String> saveMember(@RequestBody @Valid AddMemberDTO addMemberDTO) throws RegistrationInfoException {
 		// 透過key 獲取redis中的驗證碼
 		String redisCode = redissonClient.<String>getBucket(addMemberDTO.getVerificationKey()).get();
 		String userVerificationCode = addMemberDTO.getVerificationCode();
@@ -191,9 +191,10 @@ public class MemberController {
 
 		// 驗證通過,刪除key 並往後執行添加操作
 		redissonClient.getBucket(addMemberDTO.getVerificationKey()).delete();
-		SaTokenInfo tokenInfo = memberService.addMember(addMemberDTO);
 
-		return R.ok(tokenInfo);
+		String redirectURL = memberService.addMember(addMemberDTO);
+
+		return R.ok("操作成功", redirectURL);
 	}
 
 	@PostMapping("admin")

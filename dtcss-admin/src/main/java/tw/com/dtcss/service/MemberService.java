@@ -54,7 +54,7 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 * @throws Exception
 	 */
-	SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException;
+	String addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException;
 
 	/**
 	 * 新增會員，後台管理者使用

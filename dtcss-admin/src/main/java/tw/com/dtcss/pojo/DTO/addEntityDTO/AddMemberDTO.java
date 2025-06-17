@@ -9,22 +9,22 @@ import tw.com.dtcss.utils.CountryUtil;
 @Data
 public class AddMemberDTO {
 
-//	@NotBlank
+	//	@NotBlank
 	@Schema(description = "同時作為護照號碼 和 台灣身分證字號使用")
 	private String idCard;
 
-//	@NotBlank
+	//	@NotBlank
 	@Schema(description = "頭銜 - 前墜詞")
 	private String title;
 
 	@Schema(description = "中文姓名，外國人非必填，台灣人必填")
 	private String chineseName;
 
-//	@NotBlank
+	//	@NotBlank
 	@Schema(description = "名字, 華人的名在後  , 外國人的名在前")
 	private String firstName;
 
-//	@NotBlank
+	//	@NotBlank
 	@Schema(description = "姓氏, 華人的姓氏在前, 外國人的姓氏在後")
 	private String lastName;
 
@@ -32,11 +32,11 @@ public class AddMemberDTO {
 	@Schema(description = "E-Mail")
 	private String email;
 
-//	@NotBlank
+	//	@NotBlank
 	@Schema(description = "密碼")
 	private String password;
 
-//	@NotBlank
+	//	@NotBlank
 	@Schema(description = "國家")
 	private String country = CountryUtil.getNational();;
 
@@ -64,8 +64,8 @@ public class AddMemberDTO {
 
 	@Schema(description = "收據抬頭統編")
 	private String receipt;
-	
-//	@NotBlank
+
+	//	@NotBlank
 	@Schema(description = "餐食調查，填寫葷 或 素")
 	private String food;
 

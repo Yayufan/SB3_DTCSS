@@ -345,7 +345,10 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	@Override
 	@Transactional
-	public SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException {
+	public String addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException {
+
+		// 返回要觸發的網址
+		String returnUrl = null;
 
 		// 獲取設定上的早鳥優惠、一般金額、及最後註冊時間
 		Setting setting = settingService.getSetting();
@@ -433,8 +436,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 準備要付款表單
 		String paymentInstruction = "";
 		if (memberCategoryEnum.getValue().equals(MemberCategoryEnum.NURSE.getValue())) {
-			paymentInstruction = "您需付款的金額為 台幣250元，請前往付款： " + projectPropertiesConfig.getProtocol()
-					+ projectPropertiesConfig.getDomain() + "/payment?orderId=" + ordersId;
+			//			paymentInstruction = "您需付款的金額為 台幣250元，請前往付款： " + projectPropertiesConfig.getProtocol()
+			//					+ projectPropertiesConfig.getDomain() + "/payment?orderId=" + ordersId;
+
+			returnUrl = projectPropertiesConfig.getProtocol() + projectPropertiesConfig.getDomain()
+					+ "/payment?orderId=" + ordersId;
+			;
+
 		}
 
 		// 準備信件，如果是Nurse身分,就會自動新增近表單內
@@ -518,17 +526,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		/** ------------------------------------------------------- */
 
-		// 之後應該要以這個會員ID 產生Token 回傳前端，讓他直接進入登入狀態
-		StpKit.MEMBER.login(currentMember.getMemberId());
-
-		// 登入後才能取得session
-		SaSession session = StpKit.MEMBER.getSession();
-		// 並對此token 設置會員的緩存資料
-		session.set(MEMBER_CACHE_INFO_KEY, currentMember);
-
-		SaTokenInfo tokenInfo = StpKit.MEMBER.getTokenInfo();
-		return tokenInfo;
-
+		// 這邊如果回傳的URL有變化, 在判斷完身分就會更改，醫師是null, 護理人員是付款連結
+		return returnUrl;
 	}
 
 	@Override
