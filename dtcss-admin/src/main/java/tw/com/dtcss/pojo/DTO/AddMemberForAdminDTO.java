@@ -37,7 +37,7 @@ public class AddMemberForAdminDTO {
 	private String password;
 
 //	@NotBlank
-	@Schema(description = "國家，預設為Taiwan")
+	@Schema(description = "國家，前端不傳此參數，預設為Taiwan")
 	private String country = CountryUtil.getNational();
 
 	@Schema(description = "匯款帳號-後五碼  台灣會員使用")

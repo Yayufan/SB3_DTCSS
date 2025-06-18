@@ -34,6 +34,7 @@ import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import tw.com.dtcss.config.ProjectPropertiesConfig;
 import tw.com.dtcss.convert.MemberConvert;
 import tw.com.dtcss.enums.MemberCategoryEnum;
@@ -79,6 +80,7 @@ import tw.com.dtcss.service.OrdersService;
 import tw.com.dtcss.service.SettingService;
 import tw.com.dtcss.service.TagService;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> implements MemberService {
