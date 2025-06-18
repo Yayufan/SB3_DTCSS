@@ -493,6 +493,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 									<td> %s </td>
 								</tr>
 								<tr>
+									<td>若需修改報名資料或其他問題，請來信joanne.wang@zhongfu-pr.com.tw</td>
+								</tr>
+								<tr>
 									<td><br>如果您有任何問題, 歡迎隨時與我們聯絡。我們期待在會議上與您相見！</td>
 								</tr>
 							</table>
