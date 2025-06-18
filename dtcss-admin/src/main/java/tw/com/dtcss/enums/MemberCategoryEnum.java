@@ -13,8 +13,8 @@ import tw.com.dtcss.exception.RegistrationInfoException;
 public enum MemberCategoryEnum {
 	MEMBER(1, "Member", "Member(會員)"), OTHERS(2, "Others", "Others(非會員)"),
 	NON_MEMBER(3, "Non-Member", "Non-Member(非會員醫師)"), MVP(4, "MVP", "MVP"), SPEAKER(5, "Speaker", "講者"),
-	MODERATOR(6, "Moderator", "座長"), STAFF(7, "Staff", "工作人員"), DOCTOR(8, "doctor", "醫師"),
-	NURSE(9, "nurse", "護理人員");
+	MODERATOR(6, "Moderator", "座長"), STAFF(7, "Staff", "工作人員"), DOCTOR(8, "doctor", "9/6醫師手術直播研討會"), NURSE(9, "nurse", "9/7護理人員研討會"),
+	TZU_CHI_NURSE(10, "nurse(Tzu Chi)", "9/7護理人員研討會(慈濟人員 For Free)");
 
 	private final Integer value;
 	private final String labelEn;

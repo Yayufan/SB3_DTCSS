@@ -381,12 +381,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 判斷身分給予註冊費金額
 		switch (memberCategoryEnum) {
+		case TZU_CHI_NURSE:
 		case DOCTOR: {
-			// 醫師，金額設定為0，狀態為已繳費
+			// 醫師 或 護理人員(慈濟)，金額設定為0，狀態為已繳費
 			amount = BigDecimal.ZERO;
 			addOrdersDTO.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
 
-			// 因為是0元訂單, 直接付款完畢,所以醫師就直接是與會者
+			// 因為是0元訂單, 直接付款完畢,所以 醫師 或 護理人員(慈濟) 就直接是與會者
 			AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
 			addAttendeesDTO.setEmail(currentMember.getEmail());
 			addAttendeesDTO.setMemberId(currentMember.getMemberId());
@@ -433,14 +434,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 準備寄信給這個會員通知他，已經成功註冊，所以先製作HTML信件 和 純文字信件
 
-		// 準備要付款表單
+		// 準備要付款表單，只有一般護理人員要給他返回 付款URL
 		String paymentInstruction = "";
 		if (memberCategoryEnum.getValue().equals(MemberCategoryEnum.NURSE.getValue())) {
 			//			paymentInstruction = "您需付款的金額為 台幣250元，請前往付款： " + projectPropertiesConfig.getProtocol()
 			//					+ projectPropertiesConfig.getDomain() + "/payment?orderId=" + ordersId;
 
-			returnUrl = projectPropertiesConfig.getProtocol() + projectPropertiesConfig.getDomain()
-					+ "/payment?orderId=" + ordersId;
+			returnUrl = "payment?orderId=" + ordersId;
 			;
 
 		}
@@ -474,8 +474,11 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 								<tr>
 						            <td><strong>姓名:</strong> %s</td>
 						        </tr>
+						        <tr>
+							        <td><strong>所屬醫院:</strong> %s</td>
+							    </tr>
 							    <tr>
-							        <td><strong>單位:</strong> %s</td>
+							        <td><strong>所屬科部:</strong> %s</td>
 							    </tr>
 							    <tr>
 							        <td><strong>職稱:</strong> %s</td>
@@ -484,7 +487,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 							        <td><strong>聯絡電話:</strong> %s</td>
 							    </tr>
 							    <tr>
-							        <td><strong>報名身分:</strong> %s</td>
+							        <td><strong>報名類別:</strong> %s</td>
 							    </tr>
 								<tr>
 									<td> %s </td>
@@ -496,16 +499,17 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 						</body>
 					</html>
 					""".formatted(addMemberDTO.getChineseName(), projectPropertiesConfig.getTitle(),
-				addMemberDTO.getChineseName(), addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(),
-				addMemberDTO.getPhone(), memberCategoryEnum.getLabelZh(), paymentInstruction);
+				addMemberDTO.getChineseName(), addMemberDTO.getReceipt(), addMemberDTO.getAffiliation(),
+				addMemberDTO.getJobTitle(), addMemberDTO.getPhone(), memberCategoryEnum.getLabelZh(),
+				paymentInstruction);
 
 		// 準備純文字信件內容
 		String plainTextContent = String.format(
 				"親愛的 %s ，您好：\n\n" + "感謝您註冊參加 %s ，您的註冊已成功完成。\n\n" + "您的註冊資訊如下：\n\n" + "姓名: %s\n" + "單位: %s\n"
 						+ "職稱: %s\n" + "聯絡電話: %s\n" + "報名身分: %s\n\n" + "%s\n\n" + "如果您有任何問題, 歡迎隨時與我們聯絡。我們期待在會議上與您相見！",
 				addMemberDTO.getChineseName(), projectPropertiesConfig.getTitle(), addMemberDTO.getChineseName(),
-				addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(), addMemberDTO.getPhone(),
-				memberCategoryEnum.getValue(), paymentInstruction);
+				addMemberDTO.getReceipt(), addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(),
+				addMemberDTO.getPhone(), memberCategoryEnum.getValue(), paymentInstruction);
 
 		// 透過異步工作去寄送郵件
 		asyncService.sendCommonEmail(addMemberDTO.getEmail(), projectPropertiesConfig.getTitle(), htmlContent,
