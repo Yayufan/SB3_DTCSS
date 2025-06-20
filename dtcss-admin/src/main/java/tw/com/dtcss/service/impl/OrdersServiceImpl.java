@@ -157,7 +157,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 設定付款完成後，返回的前端網址，這邊讓他回到官網
 		aioCheckOutOneTime.setClientBackURL("https://" + projectPropertiesConfig.getDomain());
 		// 設定付款完成通知的網址,應該可以直接設定成後端API，實證有效
-		aioCheckOutOneTime.setReturnURL("https://" + projectPropertiesConfig.getDomain() + "prod-api/payment");
+		aioCheckOutOneTime.setReturnURL("https://" + projectPropertiesConfig.getDomain() + "/prod-api/payment");
 		// 這邊不需要他回傳額外付款資料
 		aioCheckOutOneTime.setNeedExtraPaidInfo("N");
 		// 設定英文介面
