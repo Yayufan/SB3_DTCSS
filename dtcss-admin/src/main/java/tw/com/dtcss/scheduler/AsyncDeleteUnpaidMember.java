@@ -25,9 +25,9 @@ public class AsyncDeleteUnpaidMember {
 	private final OrdersMapper ordersMapper;
 
 	// 使用 Cron 表達式設置定時任務 (每分鐘第零秒執行此任務，測試時使用)
-		@Scheduled(cron = "0 * * * * ?")
+	//	@Scheduled(cron = "0 * * * * ?")
 	// 使用 Cron 表達式設置定時任務 (每天凌晨2點執行 cron = "0 0 2 * * ?" )
-//	@Scheduled(cron = "0 0 1 * * ?")
+	@Scheduled(cron = "0 0 2 * * ?")
 	public void deleteUnpaidMember() {
 
 		// 1.先查詢訂單中尚未付款的訂單，並刪除沒繳費的訂單
