@@ -150,8 +150,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 計算是否超過 24 小時
 		LocalDateTime createTime = orders.getCreateDate();
 		LocalDateTime now = LocalDateTime.now();
+		//now.minusSeconds(300) 測試用
 		if (createTime.isBefore(now.minusHours(24))) {
-			log.info("Log: 訂單已過期, id= " + id );
+			log.info("Log: 訂單已過期, id= " + id + "刪除會員 和 訂單");
 
 			// 付款鏈結過期，刪除訂單
 			baseMapper.deleteById(orders);
@@ -159,7 +160,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 			// 付款鏈結過期，刪除會員
 			memberMapper.deleteById(orders.getMemberId());
 
-			throw new RegistrationInfoException("訂單已過期，請重新報名");
+			throw new RegistrationInfoException("此付款連結已失效，請重新註冊並於獲得付款連結24小時內完成付款");
 		}
 
 		// 根據訂單ID,獲取這個訂單的持有者Member，如果訂單為子報名者要求產生，則直接拋出錯誤
