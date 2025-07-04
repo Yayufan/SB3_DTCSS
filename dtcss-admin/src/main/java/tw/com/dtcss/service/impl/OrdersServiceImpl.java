@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +17,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import ecpay.payment.integration.AllInOne;
 import ecpay.payment.integration.domain.AioCheckOutOneTime;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import tw.com.dtcss.config.ProjectPropertiesConfig;
 import tw.com.dtcss.convert.OrdersConvert;
+import tw.com.dtcss.enums.OrderStatusEnum;
 import tw.com.dtcss.exception.OrderPaymentException;
+import tw.com.dtcss.exception.RegistrationInfoException;
 import tw.com.dtcss.mapper.MemberMapper;
 import tw.com.dtcss.mapper.OrdersMapper;
 import tw.com.dtcss.pojo.DTO.addEntityDTO.AddOrdersDTO;
@@ -30,6 +34,7 @@ import tw.com.dtcss.service.OrdersService;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> implements OrdersService {
 
 	private static final AtomicInteger counter = new AtomicInteger(0);
@@ -119,6 +124,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 
 	@Override
 	public String payment(Long id) {
+
 		// 創建全方位金流對象
 		AllInOne allInOne = new AllInOne("");
 
@@ -128,6 +134,34 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 根據前端傳來的資料,獲取訂單
 		Orders orders = this.getOrders(id);
 
+		if (orders == null) {
+			log.warn("Log: 查無此訂單, id=", id);
+			throw new RegistrationInfoException("查無此訂單");
+		}
+
+		// 判斷是否已繳費
+		if (!OrderStatusEnum.UNPAID.getValue().equals(orders.getStatus())) {
+			log.info("Log: 訂單已繳費或狀態異常, id=", id);
+			throw new RegistrationInfoException("訂單已繳費或狀態異常");
+		}
+
+		/* 對應DTCSS 進行修改，產生付款表單時就判斷訂單使否過期 */
+
+		// 計算是否超過 24 小時
+		LocalDateTime createTime = orders.getCreateDate();
+		LocalDateTime now = LocalDateTime.now();
+		if (createTime.isBefore(now.minusHours(24))) {
+			log.info("Log: 訂單已過期, id= " + id );
+
+			// 付款鏈結過期，刪除訂單
+			baseMapper.deleteById(orders);
+
+			// 付款鏈結過期，刪除會員
+			memberMapper.deleteById(orders.getMemberId());
+
+			throw new RegistrationInfoException("訂單已過期，請重新報名");
+		}
+
 		// 根據訂單ID,獲取這個訂單的持有者Member，如果訂單為子報名者要求產生，則直接拋出錯誤
 		Member member = memberMapper.selectById(orders.getMemberId());
 		if ("slave".equals(member.getGroupRole())) {
@@ -135,7 +169,6 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		}
 
 		// 獲取當前時間並格式化，為了填充交易時間
-		LocalDateTime now = LocalDateTime.now();
 		String nowFormat = now.format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"));
 
 		// 訂單交易編號,僅接受20位長度，編號不可重複，使用自定義生成function 處理
