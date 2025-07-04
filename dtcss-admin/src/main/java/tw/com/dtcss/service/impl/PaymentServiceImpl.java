@@ -71,6 +71,11 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 		// 如果付款成功，更新訂單的付款狀態
 		if (payment.getRtnCode().equals("1")) {
 			currentOrders = ordersService.getOrders(payment.getOrdersId());
+			
+			if(currentOrders == null) {
+				log.error(payment.getOrdersId() + "訂單編號,已於定期任務中刪除");
+			}
+			
 			// 如果已經成功過就不用在更新成失敗
 			if (currentOrders.getStatus() != 2) {
 				// 2 代表付款成功，並更新這筆訂單資料

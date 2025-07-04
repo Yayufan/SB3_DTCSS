@@ -439,12 +439,22 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 準備要付款表單，只有一般護理人員要給他返回 付款URL
 		String paymentInstruction = "";
 		if (memberCategoryEnum.getValue().equals(MemberCategoryEnum.NURSE.getValue())) {
-			//			paymentInstruction = "您需付款的金額為 台幣250元，請前往付款： " + projectPropertiesConfig.getProtocol()
-			//					+ projectPropertiesConfig.getDomain() + "/payment?orderId=" + ordersId;
+			paymentInstruction = "您需付款的金額為 台幣250元，此付款連結將於24小時候失效，<br>"
+					+ "請於失效前，前往付款： " + projectPropertiesConfig.getProtocol()
+					+ projectPropertiesConfig.getDomain() + "/payment?orderId=" + ordersId;
 
 			returnUrl = "payment?orderId=" + ordersId;
 			;
 
+		}
+
+		String idCardNumberRow = ""; // 身分證字號欄位（HTML用）
+		String plainIdCard = ""; // 純文字信件用
+
+		// 如果有身分證字號，就插入到表格中
+		if (StringUtils.isNotBlank(addMemberDTO.getIdCard())) {
+			idCardNumberRow = "<tr><td><strong>身分證字號:</strong> %s</td></tr>".formatted(addMemberDTO.getIdCard());
+			plainIdCard = "身分證字號: %s\n".formatted(addMemberDTO.getIdCard());
 		}
 
 		// 準備信件，如果是Nurse身分,就會自動新增近表單內
@@ -476,6 +486,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 								<tr>
 						            <td><strong>姓名:</strong> %s</td>
 						        </tr>
+						        %s
 						        <tr>
 							        <td><strong>所屬醫院:</strong> %s</td>
 							    </tr>
@@ -495,25 +506,25 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 									<td> %s </td>
 								</tr>
 								<tr>
-									<td>若需修改報名資料或其他問題，請來信joanne.wang@zhongfu-pr.com.tw</td>
+									<td>若需修改報名資料或其他問題，請來信 joanne.wang@zhongfu-pr.com.tw</td>
 								</tr>
 								<tr>
-									<td><br>如果您有任何問題, 歡迎隨時與我們聯絡。我們期待在會議上與您相見！</td>
+									<td>有任何問題, 歡迎隨時與我們聯絡。我們期待在會議上與您相見！</td>
 								</tr>
 							</table>
 						</body>
 					</html>
 					""".formatted(addMemberDTO.getChineseName(), projectPropertiesConfig.getTitle(),
-				addMemberDTO.getChineseName(), addMemberDTO.getReceipt(), addMemberDTO.getAffiliation(),
-				addMemberDTO.getJobTitle(), addMemberDTO.getPhone(), memberCategoryEnum.getLabelZh(),
-				paymentInstruction);
+				addMemberDTO.getChineseName(), idCardNumberRow, addMemberDTO.getReceipt(),
+				addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(), addMemberDTO.getPhone(),
+				memberCategoryEnum.getLabelZh(), paymentInstruction);
 
 		// 準備純文字信件內容
 		String plainTextContent = String.format(
 				"親愛的 %s ，您好：\n\n" + "感謝您註冊參加 %s ，您的註冊已成功完成。\n\n" + "您的註冊資訊如下：\n\n" + "姓名: %s\n" + "單位: %s\n"
 						+ "職稱: %s\n" + "聯絡電話: %s\n" + "報名身分: %s\n\n" + "%s\n\n" + "如果您有任何問題, 歡迎隨時與我們聯絡。我們期待在會議上與您相見！",
 				addMemberDTO.getChineseName(), projectPropertiesConfig.getTitle(), addMemberDTO.getChineseName(),
-				addMemberDTO.getReceipt(), addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(),
+				plainIdCard, addMemberDTO.getReceipt(), addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(),
 				addMemberDTO.getPhone(), memberCategoryEnum.getValue(), paymentInstruction);
 
 		// 透過異步工作去寄送郵件
