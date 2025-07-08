@@ -141,8 +141,8 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 
 		// 判斷是否已繳費
 		if (!OrderStatusEnum.UNPAID.getValue().equals(orders.getStatus())) {
-			log.info("Log: 訂單已繳費或狀態異常, id=", id);
-			throw new RegistrationInfoException("訂單已繳費或狀態異常");
+			log.info("Log: 訂單已繳費, id=", id);
+			throw new RegistrationInfoException("訂單已繳費");
 		}
 
 		/* 對應DTCSS 進行修改，產生付款表單時就判斷訂單使否過期 */
