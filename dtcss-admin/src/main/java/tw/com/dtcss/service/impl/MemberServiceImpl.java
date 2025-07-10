@@ -439,13 +439,20 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 準備要付款表單，只有一般護理人員要給他返回 付款URL
 		String paymentInstruction = "";
 		if (memberCategoryEnum.getValue().equals(MemberCategoryEnum.NURSE.getValue())) {
-			paymentInstruction = "您需付款的金額為 台幣250元，此付款連結將於24小時候失效，<br>"
-					+ "請於失效前，前往付款： " + projectPropertiesConfig.getProtocol()
-					+ projectPropertiesConfig.getDomain() + "/payment?orderId=" + ordersId;
+			paymentInstruction = "您需付款的金額為 台幣250元，此付款連結將於24小時候失效，<br>" + "請於失效前，前往付款： "
+					+ projectPropertiesConfig.getProtocol() + projectPropertiesConfig.getDomain() + "/payment?orderId="
+					+ ordersId;
 
 			returnUrl = "payment?orderId=" + ordersId;
 			;
 
+		}
+
+		String additionalParticipation = "";
+		if (memberCategoryEnum.getValue().equals(MemberCategoryEnum.DOCTOR.getValue())) {
+			additionalParticipation = "<strong>是否參與 9/7 護理人員研討會：</strong> " + currentMember.getCategoryExtra();
+		} else {
+			additionalParticipation = "<strong>是否旁聽 9/6 醫師研討會：</strong> " + currentMember.getCategoryExtra();
 		}
 
 		String idCardNumberRow = ""; // 身分證字號欄位（HTML用）
@@ -506,6 +513,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 									<td> %s </td>
 								</tr>
 								<tr>
+									<td> %s </td>
+								</tr>
+								<tr>
 									<td>若需修改報名資料或其他問題，請來信 joanne.wang@zhongfu-pr.com.tw</td>
 								</tr>
 								<tr>
@@ -517,15 +527,16 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 					""".formatted(addMemberDTO.getChineseName(), projectPropertiesConfig.getTitle(),
 				addMemberDTO.getChineseName(), idCardNumberRow, addMemberDTO.getReceipt(),
 				addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(), addMemberDTO.getPhone(),
-				memberCategoryEnum.getLabelZh(), paymentInstruction);
+				memberCategoryEnum.getLabelZh(), additionalParticipation, paymentInstruction);
 
 		// 準備純文字信件內容
 		String plainTextContent = String.format(
-				"親愛的 %s ，您好：\n\n" + "感謝您註冊參加 %s ，您的註冊已成功完成。\n\n" + "您的註冊資訊如下：\n\n" + "姓名: %s\n" + "單位: %s\n"
-						+ "職稱: %s\n" + "聯絡電話: %s\n" + "報名身分: %s\n\n" + "%s\n\n" + "如果您有任何問題, 歡迎隨時與我們聯絡。我們期待在會議上與您相見！",
+				"親愛的 %s ，您好：\n\n" + "感謝您註冊參加 %s ，您的註冊已成功完成。\n\n" + "您的註冊資訊如下：\n\n" + "姓名: %s\n" + "%s" + "所屬醫院: %s\n"
+						+ "所屬科部: %s\n" + "職稱: %s\n" + "聯絡電話: %s\n" + "報名類別: %s\n\n" + "%s\n\n"
+						+ "如果您有任何問題, 歡迎隨時與我們聯絡。我們期待在會議上與您相見！",
 				addMemberDTO.getChineseName(), projectPropertiesConfig.getTitle(), addMemberDTO.getChineseName(),
-				plainIdCard, addMemberDTO.getReceipt(), addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(),
-				addMemberDTO.getPhone(), memberCategoryEnum.getValue(), paymentInstruction);
+				idCardNumberRow, addMemberDTO.getReceipt(), addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(),
+				addMemberDTO.getPhone(), memberCategoryEnum.getLabelZh(), additionalParticipation, paymentInstruction);
 
 		// 透過異步工作去寄送郵件
 		asyncService.sendCommonEmail(addMemberDTO.getEmail(), projectPropertiesConfig.getTitle(), htmlContent,
