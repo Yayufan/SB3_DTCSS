@@ -56,7 +56,7 @@ public class AttendeesExcel {
 	@ExcelProperty("國家")
 	private String country;
 
-	@ExcelProperty("匯款帳號-後五碼(台灣)")
+	@ExcelProperty("是否攜眷")
 	private String remitAccountLast5;
 
 	@ExcelProperty("電話號碼")
@@ -72,10 +72,10 @@ public class AttendeesExcel {
 	@ExcelProperty("收據抬頭統編")
 	private String receipt;
 
-	@ExcelProperty("餐食調查")
+	@ExcelProperty("是否住宿")
 	private String food;
 
-	@ExcelProperty("飲食禁忌")
+	@ExcelProperty("是否參加晚宴")
 	private String foodTaboo;
 
 	@ExcelProperty("群組代號")

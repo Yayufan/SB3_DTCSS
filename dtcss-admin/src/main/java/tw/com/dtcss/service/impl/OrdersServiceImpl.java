@@ -140,7 +140,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		}
 
 		// 判斷是否已繳費
-		if (!OrderStatusEnum.UNPAID.getValue().equals(orders.getStatus())) {
+		if (OrderStatusEnum.PAYMENT_SUCCESS.getValue().equals(orders.getStatus())) {
 			log.info("Log: 訂單已繳費, id=", id);
 			throw new RegistrationInfoException("訂單已繳費");
 		}

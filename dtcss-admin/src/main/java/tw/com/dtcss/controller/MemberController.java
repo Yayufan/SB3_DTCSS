@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wf.captcha.SpecCaptcha;
@@ -37,7 +38,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.dtcss.convert.MemberConvert;
+import tw.com.dtcss.enums.MemberCategoryEnum;
 import tw.com.dtcss.exception.RegistrationInfoException;
+import tw.com.dtcss.mapper.MemberMapper;
 import tw.com.dtcss.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.dtcss.pojo.DTO.ForgetPwdDTO;
 import tw.com.dtcss.pojo.DTO.GroupRegistrationDTO;
@@ -66,8 +69,22 @@ public class MemberController {
 	@Qualifier("businessRedissonClient")
 	private final RedissonClient redissonClient;
 
+	private final MemberMapper memberMapper;
 	private final MemberService memberService;
 	private final MemberConvert memberConvert;
+	
+	@GetMapping("/nurse-count")
+	@Operation(summary = "獲取一般繳費人員報名總數")
+	public R<Long> getNurse() {
+	
+		LambdaQueryWrapper<Member> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(Member::getCategory,MemberCategoryEnum.NURSE.getValue());
+		
+		Long count = memberMapper.selectCount(queryWrapper);
+		return R.ok(count);
+	}
+
+	/* ------------------------------------------------------ */
 
 	@GetMapping("/captcha")
 	@Operation(summary = "獲取驗證碼")
