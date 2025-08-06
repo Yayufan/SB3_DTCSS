@@ -35,7 +35,7 @@ public class MybatisPlusGeneratedBusinessReplenish {
 	/**
 	 * jdbc 路径(自行替換)
 	 */
-	private static final String URL = "jdbc:mariadb://192.168.56.1:3306/topbs2025_international_conferenct";
+	private static final String URL = "jdbc:mariadb://192.168.56.1:3306/dtcss2025_international_conferenct";
 
 	/**
 	 * 数据库账号(自行替換)
@@ -124,7 +124,7 @@ public class MybatisPlusGeneratedBusinessReplenish {
 				// 策略配置
 				.strategyConfig(builder -> {
 					// 设置需要生成的表名,排除system類的table
-					builder.addInclude("paper_reviewer_file").addTablePrefix() // 设置过滤表前缀, sys_user設置成 user表,一般不用寫
+					builder.addInclude("questionnaire").addTablePrefix() // 设置过滤表前缀, sys_user設置成 user表,一般不用寫
 
 							.controllerBuilder().enableRestStyle().enableHyphenStyle().enableFileOverride() // controller層
 																											// 原檔案覆蓋
