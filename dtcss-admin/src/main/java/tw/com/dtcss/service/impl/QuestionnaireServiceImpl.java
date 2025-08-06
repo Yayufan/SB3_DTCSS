@@ -16,11 +16,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.dtcss.convert.QuestionnaireConvert;
+import tw.com.dtcss.enums.MemberCategoryEnum;
 import tw.com.dtcss.exception.RegistrationClosedException;
 import tw.com.dtcss.manager.MemberManager;
 import tw.com.dtcss.mapper.AttendeesMapper;
 import tw.com.dtcss.mapper.MemberMapper;
 import tw.com.dtcss.mapper.QuestionnaireMapper;
+import tw.com.dtcss.pojo.DTO.IdCardAndEmailDTO;
 import tw.com.dtcss.pojo.DTO.addEntityDTO.AddQuestionnaireDTO;
 import tw.com.dtcss.pojo.VO.AttendeesVO;
 import tw.com.dtcss.pojo.entity.Attendees;
@@ -48,11 +50,13 @@ public class QuestionnaireServiceImpl extends ServiceImpl<QuestionnaireMapper, Q
 	private final QuestionnaireConvert questionnaireConvert;
 
 	@Override
-	public AttendeesVO getAttendeesVOByIdCard(String idCard) {
+	public AttendeesVO getAttendeesVOByIdCard(IdCardAndEmailDTO idCardAndEmailDTO) {
 
 		// 1.透過身分證字號查找會員資料
 		LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
-		memberWrapper.eq(Member::getIdCard, idCard);
+		memberWrapper.eq(Member::getIdCard, idCardAndEmailDTO.getIdCard())
+				.eq(Member::getEmail, idCardAndEmailDTO.getEmail())
+				;
 		Member member = memberMapper.selectOne(memberWrapper);
 
 		// 2.如果查無資料則報錯

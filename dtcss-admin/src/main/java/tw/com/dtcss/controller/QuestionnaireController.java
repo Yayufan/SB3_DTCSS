@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.dtcss.pojo.DTO.IdCardAndEmailDTO;
 import tw.com.dtcss.pojo.DTO.addEntityDTO.AddQuestionnaireDTO;
 import tw.com.dtcss.pojo.VO.AttendeesVO;
 import tw.com.dtcss.pojo.entity.Questionnaire;
@@ -43,10 +44,10 @@ public class QuestionnaireController {
 
 	private final QuestionnaireService questionnaireService;
 	
-	@GetMapping("id_card")
+	@PostMapping("id_card")
 	@Operation(summary = "透過身分證字號拿到與會者資料")
-	public R<AttendeesVO> getAttendeesVOByIdCard(@RequestParam("idCard") String idCard ) {
-		AttendeesVO attendeesVO = questionnaireService.getAttendeesVOByIdCard(idCard);
+	public R<AttendeesVO> getAttendeesVOByIdCard(@RequestBody @Valid IdCardAndEmailDTO idCardAndEmailDTO) {
+		AttendeesVO attendeesVO = questionnaireService.getAttendeesVOByIdCard(idCardAndEmailDTO);
 		return R.ok(attendeesVO);
 	}
 	

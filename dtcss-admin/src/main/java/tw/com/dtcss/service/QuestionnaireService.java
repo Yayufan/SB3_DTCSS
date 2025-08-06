@@ -6,6 +6,7 @@ import java.io.UnsupportedEncodingException;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import jakarta.servlet.http.HttpServletResponse;
+import tw.com.dtcss.pojo.DTO.IdCardAndEmailDTO;
 import tw.com.dtcss.pojo.DTO.addEntityDTO.AddQuestionnaireDTO;
 import tw.com.dtcss.pojo.VO.AttendeesVO;
 import tw.com.dtcss.pojo.entity.Questionnaire;
@@ -22,10 +23,10 @@ public interface QuestionnaireService extends IService<Questionnaire> {
 
 	/**
 	 * 根據idCard獲取與會者ID
-	 * @param idCard
-	 * @return 
+	 * @param idCardAndEmailDTO
+	 * @return
 	 */
-	AttendeesVO getAttendeesVOByIdCard(String idCard);
+	AttendeesVO getAttendeesVOByIdCard(IdCardAndEmailDTO idCardAndEmailDTO);
 
 	/**
 	 * 根據主鍵ID獲取問卷紀錄
