@@ -1,5 +1,6 @@
 package tw.com.dtcss.manager;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Comparator;
@@ -17,14 +18,18 @@ import tw.com.dtcss.convert.CheckinRecordConvert;
 import tw.com.dtcss.enums.CheckinActionTypeEnum;
 import tw.com.dtcss.exception.CheckinRecordException;
 import tw.com.dtcss.mapper.CheckinRecordMapper;
+import tw.com.dtcss.mapper.QuestionnaireMapper;
 import tw.com.dtcss.pojo.BO.CheckinInfoBO;
 import tw.com.dtcss.pojo.BO.PresenceStatsBO;
 import tw.com.dtcss.pojo.DTO.addEntityDTO.AddCheckinRecordDTO;
 import tw.com.dtcss.pojo.entity.CheckinRecord;
+import tw.com.dtcss.pojo.entity.Questionnaire;
 
 @Component
 @RequiredArgsConstructor
 public class CheckinRecordManager {
+
+	private final QuestionnaireMapper questionnaireMapper;
 
 	private final CheckinRecordMapper checkinRecordMapper;
 	private final CheckinRecordConvert checkinRecordConvert;
@@ -127,6 +132,21 @@ public class CheckinRecordManager {
 		// 3.最新數據不為null，判斷是否操作行為一致，如果一致，拋出異常，告知不可連續簽到 或 簽退
 		if (latestRecord != null && latestRecord.getActionType().equals(addCheckinRecordDTO.getActionType())) {
 			throw new CheckinRecordException("不可連續簽到 或 連續簽退");
+		}
+
+		// 如果在9/7時 簽退要判斷有沒有填寫問卷
+		// 設定目標日期為今年的9月7日
+		LocalDate targetDate = LocalDate.of(LocalDate.now().getYear(), 9, 7);
+
+		// 判斷是否為簽退操作 且 今天是否是目標日期9/7
+		if (LocalDate.now().equals(targetDate) && CheckinActionTypeEnum.CHECKOUT.getValue().equals(addCheckinRecordDTO.getActionType())) {
+			// 如果是則透過attendeesId找出問卷, 如果有填寫紀錄則通過
+			LambdaQueryWrapper<Questionnaire> questionnaireWrapper = new LambdaQueryWrapper<>();
+			questionnaireWrapper.eq(Questionnaire::getAttendeesId, addCheckinRecordDTO.getAttendeesId());
+			Long count = questionnaireMapper.selectCount(questionnaireWrapper);
+			if (count < 1) {
+				throw new CheckinRecordException("請先填寫完問卷，再進行簽退");
+			}
 		}
 
 		// 4.轉換成entity對象
