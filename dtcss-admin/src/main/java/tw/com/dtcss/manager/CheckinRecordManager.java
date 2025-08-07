@@ -16,19 +16,26 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import tw.com.dtcss.convert.CheckinRecordConvert;
 import tw.com.dtcss.enums.CheckinActionTypeEnum;
+import tw.com.dtcss.enums.MemberCategoryEnum;
 import tw.com.dtcss.exception.CheckinRecordException;
+import tw.com.dtcss.mapper.AttendeesMapper;
 import tw.com.dtcss.mapper.CheckinRecordMapper;
+import tw.com.dtcss.mapper.MemberMapper;
 import tw.com.dtcss.mapper.QuestionnaireMapper;
 import tw.com.dtcss.pojo.BO.CheckinInfoBO;
 import tw.com.dtcss.pojo.BO.PresenceStatsBO;
 import tw.com.dtcss.pojo.DTO.addEntityDTO.AddCheckinRecordDTO;
+import tw.com.dtcss.pojo.entity.Attendees;
 import tw.com.dtcss.pojo.entity.CheckinRecord;
+import tw.com.dtcss.pojo.entity.Member;
 import tw.com.dtcss.pojo.entity.Questionnaire;
 
 @Component
 @RequiredArgsConstructor
 public class CheckinRecordManager {
 
+	private final MemberMapper memberMapper;
+	private final AttendeesMapper attendeesMapper;
 	private final QuestionnaireMapper questionnaireMapper;
 
 	private final CheckinRecordMapper checkinRecordMapper;
@@ -134,20 +141,32 @@ public class CheckinRecordManager {
 			throw new CheckinRecordException("不可連續簽到 或 連續簽退");
 		}
 
+		/* 以下為此次活動新增 */
+		Attendees attendees = attendeesMapper.selectById(latestRecord.getAttendeesId());
+		
+		Member member = memberMapper.selectById(attendees.getMemberId());
+		
 		// 如果在9/7時 簽退要判斷有沒有填寫問卷
 		// 設定目標日期為今年的9月7日
 		LocalDate targetDate = LocalDate.of(LocalDate.now().getYear(), 9, 7);
 
-		// 判斷是否為簽退操作 且 今天是否是目標日期9/7
-		if (LocalDate.now().equals(targetDate) && CheckinActionTypeEnum.CHECKOUT.getValue().equals(addCheckinRecordDTO.getActionType())) {
-			// 如果是則透過attendeesId找出問卷, 如果有填寫紀錄則通過
-			LambdaQueryWrapper<Questionnaire> questionnaireWrapper = new LambdaQueryWrapper<>();
-			questionnaireWrapper.eq(Questionnaire::getAttendeesId, addCheckinRecordDTO.getAttendeesId());
-			Long count = questionnaireMapper.selectCount(questionnaireWrapper);
-			if (count < 1) {
-				throw new CheckinRecordException("請先填寫完問卷，再進行簽退");
+
+		// 如果身分類別為護理人員(含慈濟體系),則往下判斷
+		if(MemberCategoryEnum.NURSE.getValue().equals(member.getCategory()) || MemberCategoryEnum.TZU_CHI_NURSE.getValue().equals(member.getCategory()) ) {
+			// 判斷是否為簽退操作 且 今天是否是目標日期9/7
+			if (LocalDate.now().equals(targetDate) && CheckinActionTypeEnum.CHECKOUT.getValue().equals(addCheckinRecordDTO.getActionType())) {
+				// 如果是則透過attendeesId找出問卷, 如果有填寫紀錄則通過
+				LambdaQueryWrapper<Questionnaire> questionnaireWrapper = new LambdaQueryWrapper<>();
+				questionnaireWrapper.eq(Questionnaire::getAttendeesId, addCheckinRecordDTO.getAttendeesId());
+				Long count = questionnaireMapper.selectCount(questionnaireWrapper);
+				if (count < 1) {
+					throw new CheckinRecordException("請先填寫完問卷，再進行簽退");
+				}
 			}
 		}
+
+	
+		/* 以上為此次活動新增 */
 
 		// 4.轉換成entity對象
 		CheckinRecord checkinRecord = checkinRecordConvert.addDTOToEntity(addCheckinRecordDTO);
